@@ -54,6 +54,12 @@ export interface SchedulerState {
   nextScheduledAt: string;
   leaseOwner: string | null;
   leaseExpiresAt: string | null;
+  /**
+   * Fingerprint of the scheduling policy (interval and jitter) that produced
+   * `nextScheduledAt`. Null for rows written before the column existed, which
+   * are reconciled on first sight.
+   */
+  schedulePolicyHash: string | null;
 }
 
 export interface StoredIncidentRuntime extends IncidentRuntimeState {

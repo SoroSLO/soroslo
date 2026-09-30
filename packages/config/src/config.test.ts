@@ -165,3 +165,27 @@ void test("accepts a string expected value for string operators", () => {
   assert.equal(loaded.config.services[0]?.checks[0]?.steps[0]?.assertions[0]?.op, "contains");
   assert.equal(loaded.config.services[0]?.checks[0]?.steps[0]?.assertions[0]?.value, "transfer");
 });
+
+void test("accepts a jitter fraction within the documented cap", () => {
+  const source = configYaml()
+    .replace("        every: 5m", "        every: 5m\n        jitter: 0.2")
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  const loaded = loadConfigText(source, { environment: {} });
+  assert.equal(loaded.config.services[0]?.checks[0]?.jitter, 0.2);
+});
+
+void test("omits jitter by default so existing schedules are unchanged", () => {
+  const source = configYaml().replace(/^notifications:[\s\S]*$/m, "");
+
+  const loaded = loadConfigText(source, { environment: {} });
+  assert.equal(loaded.config.services[0]?.checks[0]?.jitter, undefined);
+});
+
+void test("rejects a jitter fraction above the cap", () => {
+  const source = configYaml()
+    .replace("        every: 5m", "        every: 5m\n        jitter: 0.9")
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  assert.throws(() => loadConfigText(source, { environment: {} }), /jitter|too big/i);
+});

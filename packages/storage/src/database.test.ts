@@ -61,7 +61,7 @@ void test("migrates and synchronizes services/checks idempotently", () => {
       count: number;
     };
 
-    assert.equal(migrationCount.count, 2);
+    assert.equal(migrationCount.count, 3);
     assert.equal(checkCount.count, 1);
   } finally {
     storage.close();
@@ -145,7 +145,7 @@ void test("claims schedules once and preserves restart-safe timestamps", () => {
     storage.syncConfiguration(config, "config-hash");
     const checkId = qualifiedCheckId("payments", "health");
 
-    storage.ensureSchedulerState(checkId, "2026-09-29T18:05:00.000Z");
+    storage.ensureSchedulerState(checkId, "2026-09-29T18:05:00.000Z", "policy-hash");
 
     assert.equal(
       storage.tryClaimSchedule(
@@ -183,7 +183,8 @@ void test("claims schedules once and preserves restart-safe timestamps", () => {
       lastScheduledAt: "2026-09-29T18:05:00.000Z",
       nextScheduledAt: "2026-09-29T18:10:00.000Z",
       leaseOwner: null,
-      leaseExpiresAt: null
+      leaseExpiresAt: null,
+      schedulePolicyHash: "policy-hash"
     });
   } finally {
     storage.close();

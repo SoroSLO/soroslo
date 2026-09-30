@@ -154,6 +154,13 @@ CREATE TABLE notification_events (
 CREATE INDEX notification_events_incident_idx
   ON notification_events(incident_id, state, claimed_at DESC);
 `
+  },
+  {
+    version: 3,
+    name: "scheduler-schedule-policy-fingerprint",
+    sql: `
+ALTER TABLE scheduler_state ADD COLUMN schedule_policy_hash TEXT;
+`
   }
 ] as const;
 

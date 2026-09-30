@@ -1,11 +1,36 @@
 import { createHash } from "node:crypto";
 import type { CheckConfig } from "@soroslo/config";
-import { parseDurationMs } from "@soroslo/shared";
+import { applyScheduleJitter, parseDurationMs } from "@soroslo/shared";
 import { qualifiedCheckId, type SchedulerState } from "@soroslo/storage";
 
 export interface SchedulerStore {
   getSchedulerState(checkId: string): SchedulerState | null;
-  ensureSchedulerState(checkId: string, nextScheduledAt: string): SchedulerState;
+  ensureSchedulerState(
+    checkId: string,
+    nextScheduledAt: string,
+    schedulePolicyHash: string
+  ): SchedulerState;
+  /**
+   * Re-phase an existing schedule when the interval or jitter policy changed.
+   *
+   * The expected current value is passed so the update is a compare-and-set:
+   * a concurrent tick that already moved the row makes this a no-op rather
+   * than clobbering the newer value.
+   *
+   * `now` distinguishes an active lease from an expired one. A crashed runner
+   * leaves `lease_owner` set after `lease_expires_at` has passed, and
+   * `tryClaimSchedule` treats that as reclaimable. Refusing to reconcile on it
+   * would stall a policy change behind the old due time — a 24h schedule plus a
+   * crashed runner would ignore a new 1m policy on every tick until the old
+   * instant arrived. A genuinely active lease is still left alone.
+   */
+  reconcileSchedulePolicy(
+    checkId: string,
+    expectedScheduledAt: string,
+    nextScheduledAt: string,
+    schedulePolicyHash: string,
+    now: string
+  ): SchedulerState;
   tryClaimSchedule(
     checkId: string,
     scheduledAt: string,
@@ -52,6 +77,28 @@ export interface SchedulerTickResult {
   outcome: "not_due" | "missed_skipped" | "lease_not_acquired" | "executed" | "failed";
   scheduledAt?: string;
   error?: string;
+}
+
+/**
+ * Fingerprint of everything that determines a check's schedule phase.
+ *
+ * Stored alongside the persisted schedule so a configuration change is
+ * detectable: if the stored fingerprint differs from the current one, the
+ * persisted phase was produced by a different policy and must be recomputed.
+ * The check identity is included because the offset is derived from it.
+ */
+export function schedulePolicyHash(
+  checkId: string,
+  intervalMs: number,
+  jitterFraction: number
+): string {
+  return createHash("sha256")
+    .update(checkId)
+    .update("\0")
+    .update(String(intervalMs))
+    .update("\0")
+    .update(String(jitterFraction))
+    .digest("hex");
 }
 
 export function scheduledRunIdempotencyKey(
@@ -150,13 +197,34 @@ export class RestartSafeScheduler {
   private async tickCheck(scheduledCheck: ScheduledCheck, now: Date): Promise<SchedulerTickResult> {
     const checkId = qualifiedCheckId(scheduledCheck.serviceId, scheduledCheck.check.id);
     const intervalMs = parseDurationMs(scheduledCheck.check.every);
+    const jitterFraction = scheduledCheck.check.jitter ?? 0;
     const nowIso = now.toISOString();
+
+    // The jitter offset is derived from the check identity, so restarting the
+    // runner reproduces the same first due time instead of reshuffling every
+    // check. It is a pure function of the identity and the interval.
+    const policyHash = schedulePolicyHash(checkId, intervalMs, jitterFraction);
+    const phase = (base: Date | string): string =>
+      applyScheduleJitter(base, checkId, intervalMs, jitterFraction);
 
     let state = this.store.getSchedulerState(checkId);
     if (!state) {
-      state = this.store.ensureSchedulerState(
+      const firstDue = new Date(now.getTime() + intervalMs);
+      state = this.store.ensureSchedulerState(checkId, phase(firstDue), policyHash);
+    } else if (state.schedulePolicyHash !== policyHash) {
+      // A row written under a different interval or jitter policy keeps a phase
+      // that no longer matches the configuration. Without this, adding jitter
+      // to an existing check would never take effect, because the persisted
+      // `nextScheduledAt` is untouched when it is already in the future, and a
+      // restart would preserve it. Re-phasing here is what makes the feature
+      // work on upgrade rather than only on a fresh database.
+      const base = new Date(now.getTime() + intervalMs);
+      state = this.store.reconcileSchedulePolicy(
         checkId,
-        new Date(now.getTime() + intervalMs).toISOString()
+        state.nextScheduledAt,
+        phase(base),
+        policyHash,
+        now.toISOString()
       );
     }
 
@@ -166,6 +234,10 @@ export class RestartSafeScheduler {
     }
 
     if (now.getTime() - scheduledMs >= intervalMs) {
+      // `state.nextScheduledAt` is already the jittered anchor, so advancing it
+      // by whole intervals preserves the phase offset. Re-applying jitter here
+      // would add the same offset a second time and drift the schedule on every
+      // skip, compounding across repeated misses.
       const next = nextFutureSchedule(state.nextScheduledAt, intervalMs, now);
       this.store.skipMissedSchedule(checkId, state.nextScheduledAt, next, nowIso);
       return {

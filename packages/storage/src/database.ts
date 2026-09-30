@@ -295,7 +295,7 @@ export class SoroSloStorage {
       .prepare(
         `
         SELECT check_id, last_scheduled_at, next_scheduled_at,
-               lease_owner, lease_expires_at
+               lease_owner, lease_expires_at, schedule_policy_hash
         FROM scheduler_state
         WHERE check_id = ?
       `
@@ -309,26 +309,63 @@ export class SoroSloStorage {
       lastScheduledAt: nullableString(row.last_scheduled_at),
       nextScheduledAt: requiredString(row.next_scheduled_at, "next_scheduled_at"),
       leaseOwner: nullableString(row.lease_owner),
-      leaseExpiresAt: nullableString(row.lease_expires_at)
+      leaseExpiresAt: nullableString(row.lease_expires_at),
+      schedulePolicyHash: nullableString(row.schedule_policy_hash)
     };
   }
 
-  ensureSchedulerState(checkId: string, nextScheduledAt: string): SchedulerState {
+  ensureSchedulerState(
+    checkId: string,
+    nextScheduledAt: string,
+    schedulePolicyHash: string
+  ): SchedulerState {
     this.database
       .prepare(
         `
         INSERT INTO scheduler_state(
           check_id, last_scheduled_at, next_scheduled_at,
-          lease_owner, lease_expires_at
+          lease_owner, lease_expires_at, schedule_policy_hash
         )
-        VALUES (?, NULL, ?, NULL, NULL)
+        VALUES (?, NULL, ?, NULL, NULL, ?)
         ON CONFLICT(check_id) DO NOTHING
       `
       )
-      .run(checkId, nextScheduledAt);
+      .run(checkId, nextScheduledAt, schedulePolicyHash);
 
     const state = this.getSchedulerState(checkId);
     if (!state) throw new Error(`Unable to initialize scheduler state for ${checkId}`);
+    return state;
+  }
+
+  /**
+   * Re-phase an existing schedule after the interval or jitter policy changed.
+   *
+   * The update is conditional on the row still holding `expectedScheduledAt`,
+   * so two runners reconciling at once cannot overwrite each other: the loser
+   * re-reads the row the winner wrote. A leased row is left alone, because the
+   * lease holder owns the transition.
+   */
+  reconcileSchedulePolicy(
+    checkId: string,
+    expectedScheduledAt: string,
+    nextScheduledAt: string,
+    schedulePolicyHash: string,
+    now: string
+  ): SchedulerState {
+    this.database
+      .prepare(
+        `
+        UPDATE scheduler_state
+        SET next_scheduled_at = ?, schedule_policy_hash = ?
+        WHERE check_id = ?
+          AND next_scheduled_at = ?
+          AND (lease_owner IS NULL OR lease_expires_at IS NULL OR lease_expires_at <= ?)
+      `
+      )
+      .run(nextScheduledAt, schedulePolicyHash, checkId, expectedScheduledAt, now);
+
+    const state = this.getSchedulerState(checkId);
+    if (!state) throw new Error(`Unable to reconcile scheduler state for ${checkId}`);
     return state;
   }
 

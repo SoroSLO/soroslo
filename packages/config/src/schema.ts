@@ -1,5 +1,5 @@
 import { StrKey } from "@stellar/stellar-sdk";
-import { isDuration } from "@soroslo/shared";
+import { isDuration, MAX_JITTER_FRACTION } from "@soroslo/shared";
 import { z } from "zod";
 
 export const idSchema = z
@@ -170,6 +170,12 @@ export const checkSchema = z
     name: z.string().min(1),
     network: idSchema,
     every: scheduleSchema,
+    /**
+     * Share of the interval that a run's start time may be moved later by, to
+     * spread checks that share an interval. Omitted or `0` disables jitter, so
+     * existing configurations keep their exact schedule.
+     */
+    jitter: z.number().min(0).max(MAX_JITTER_FRACTION).optional(),
     timeout: durationSchema.optional(),
     incidentPolicy: incidentPolicySchema.optional(),
     slo: sloSchema.optional(),
