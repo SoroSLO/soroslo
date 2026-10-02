@@ -17,20 +17,16 @@ No current issue is classified as Trivial. The present `good first issue` tasks 
 ## Medium — 150 points each
 
 - [#22 Dashboard empty/loading/error states](https://github.com/SoroSLO/soroslo/issues/22) — multiple dashboard states plus Playwright coverage.
-- [#25 String comparison assertions](https://github.com/SoroSLO/soroslo/issues/25) — assertion/configuration behavior plus tests and documentation.
 - [#26 Safe build/runtime metadata](https://github.com/SoroSLO/soroslo/issues/26) — API schema plus Docker/build metadata handling.
 - [#27 Reusable Stellar RPC fixture builders](https://github.com/SoroSLO/soroslo/issues/27) — shared test infrastructure plus fixture migration.
-- [#36 Numeric range assertion](https://github.com/SoroSLO/soroslo/issues/36) — assertion/configuration semantics plus exact-numeric tests.
 
 - [#8 CLI config validation and one-shot checks](https://github.com/SoroSLO/soroslo/issues/8) — reuses existing execution APIs with multiple failure modes.
 - [#16 Run filtering and pagination](https://github.com/SoroSLO/soroslo/issues/16) — dashboard query state and E2E behavior.
 - [#17 Cursor pagination for runs/incidents](https://github.com/SoroSLO/soroslo/issues/17) — stable opaque cursors and compatibility.
 - [#18 Portable JSON evidence export](https://github.com/SoroSLO/soroslo/issues/18) — deterministic export and redaction.
 - [#19 SQLite backup and restore](https://github.com/SoroSLO/soroslo/issues/19) — operationally sensitive but bounded.
-- [#20 Deterministic scheduler jitter](https://github.com/SoroSLO/soroslo/issues/20) — restart and idempotency semantics.
 - [#21 Structured logs and correlation IDs](https://github.com/SoroSLO/soroslo/issues/21) — cross-component context and redaction.
 - [#23 Dashboard accessibility pass](https://github.com/SoroSLO/soroslo/issues/23) — multiple views and automated checks.
-- [#24 Rich YAML validation diagnostics](https://github.com/SoroSLO/soroslo/issues/24) — stable structured diagnostics.
 - [#28 SLO time-range selection](https://github.com/SoroSLO/soroslo/issues/28) — read-model and UI state.
 - [#29 Incident timeline visualization](https://github.com/SoroSLO/soroslo/issues/29) — aggregated evidence and E2E coverage.
 - [#30 OpenAPI generation](https://github.com/SoroSLO/soroslo/issues/30) — schema integration and drift checks.
@@ -52,9 +48,9 @@ No current issue is classified as Trivial. The present `good first issue` tasks 
 ## Working totals
 
 - Trivial: **0 issues / 0 points**
-- Medium: **22 issues / 3,300 points**
+- Medium: **18 issues / 2,700 points**
 - High: **6 issues / 1,200 points**
-- Total: **28 issues / 4,500 points**
+- Total: **24 issues / 3,900 points**
 
 These totals are planning estimates only. The actual Wave submission must respect the points budget assigned by Drips to the repository/organization.
 
