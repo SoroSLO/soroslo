@@ -204,3 +204,51 @@ notifications:
 ```
 
 Webhook URLs must use HTTPS. Secrets must be direct environment references in the source YAML; inline notification secrets are rejected by the loader.
+
+## Validation diagnostics
+
+A load failure reports every independent problem at once, each with a normalized
+path that can be pasted into a YAML search. Array indexes are bracketed, not
+dotted, so `services[0].checks[1].slo.target` is the path rather than the
+ambiguous `services.0.checks.1.slo.target`.
+
+```
+Invalid SoroSLO configuration (3 errors):
+  services[0].checks[0].slo.target: too big
+  services[1].id: id must be a lowercase identifier
+  services[1].checks[0].steps[0].contract: must be a valid Stellar contract strkey
+```
+
+Each diagnostic also carries a stable `kind` and `code`, so a CLI or dashboard
+can group or filter without parsing the message:
+
+| `kind`                   | Reported when                                         |
+| ------------------------ | ----------------------------------------------------- |
+| `unknown_field`          | a key is present that the schema does not allow       |
+| `invalid_type`           | a value has the wrong JSON type                       |
+| `invalid_id`             | an id is not a lowercase identifier                   |
+| `invalid_duration`       | a duration is not of the form `10s`, `5m`, `7d`       |
+| `invalid_contract_id`    | a contract field is not a `C...` StrKey               |
+| `invalid_reference`      | a reference does not point at an earlier step result  |
+| `invalid_value`          | any other schema constraint                           |
+| `unresolved_environment` | an `${VAR}` reference has no value in the environment |
+
+An unresolved environment variable is reported by name and by the config field
+that references it. The diagnostic path never includes, formats or logs a
+resolved value, so a diagnostic cannot leak a secret even when the missing
+variable is a webhook secret. Expansion itself necessarily reads the value in
+order to substitute it. One diagnostic is reported per referencing field, so a variable
+used in several places lists all of them:
+
+```
+Configuration requires 2 environment variables that are not set:
+  notifications.webhooks[0].secret: Environment variable 'SOROSLO_WEBHOOK_SECRET' is required but not set
+  services[0].checks[0].steps[0].contract: Environment variable 'SOROSLO_FIXTURE_CONTRACT' is required but not set
+```
+
+The message is path-free and the location is carried by `diagnostic.path`, so a
+structured consumer and a human reader each see the path exactly once.
+
+Consumers can read `ConfigError.diagnostics` directly when they need structured
+output, for example `soroslo validate --json`. A YAML parse failure carries no
+diagnostics because there is no parsed document to point into.
