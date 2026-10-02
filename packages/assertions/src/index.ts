@@ -5,5 +5,5 @@ export type {
   AssertionResult,
   AssertionSpec
 } from "./assertion.js";
-export { compareExactNumeric } from "./numeric.js";
+export { compareExactNumeric } from "@soroslo/shared";
 export const packageName = "@soroslo/assertions" as const;
