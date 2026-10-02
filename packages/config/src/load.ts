@@ -2,12 +2,27 @@ import { createHash } from "node:crypto";
 import { StrKey } from "@stellar/stellar-sdk";
 import { canonicalJson } from "@soroslo/shared";
 import { parse } from "yaml";
+import {
+  diagnosticsFromZod,
+  unresolvedEnvironmentDiagnostics,
+  type ConfigDiagnostic
+} from "./diagnostics.js";
 import { configSchema, type SoroSloConfig } from "./schema.js";
 
 export class ConfigError extends Error {
-  constructor(message: string, options: { cause?: unknown } = {}) {
-    super(message, options);
+  /**
+   * Structured diagnostics, when the failure came from validation or an
+   * unresolved environment reference. A YAML parse failure carries none.
+   */
+  readonly diagnostics: readonly ConfigDiagnostic[];
+
+  constructor(
+    message: string,
+    options: { cause?: unknown; diagnostics?: readonly ConfigDiagnostic[] } = {}
+  ) {
+    super(message, options.cause === undefined ? {} : { cause: options.cause });
     this.name = "ConfigError";
+    this.diagnostics = options.diagnostics ?? [];
   }
 }
 
@@ -64,9 +79,33 @@ export function expandEnvironment(
   source: string,
   environment: NodeJS.ProcessEnv = process.env
 ): string {
+  // Every unresolved reference is collected before failing, so one load reports
+  // all of them rather than making the operator rerun to find the next one.
+  // This is safe because reading the source cannot mutate anything, and the
+  // diagnostic path never includes, formats or logs a resolved value.
+  const unresolved = unresolvedEnvironmentDiagnostics(source, environment);
+  if (unresolved.length > 0) {
+    // One diagnostic is emitted per reference location, so the count of
+    // diagnostics is the number of *references*, not of missing variables. The
+    // header names variables, so it counts distinct names or the sentence reads
+    // "2 environment variables" when one variable is named in two fields.
+    const distinctVariables = new Set(unresolved.map((d) => d.environmentVariable)).size;
+    throw new ConfigError(
+      [
+        `Configuration requires ${distinctVariables} environment ${
+          distinctVariables === 1 ? "variable" : "variables"
+        } that ${distinctVariables === 1 ? "is" : "are"} not set:`,
+        ...unresolved.map((diagnostic) => `  ${diagnostic.path}: ${diagnostic.message}`)
+      ].join("\n"),
+      { diagnostics: unresolved }
+    );
+  }
+
   return source.replace(/\$\{([A-Z_][A-Z0-9_]*)\}/g, (_match, name: string) => {
     const value = environment[name];
     if (value === undefined) {
+      // Unreachable while the collection above passes, but the expansion still
+      // refuses to proceed rather than substituting an empty string.
       throw new ConfigError(`Environment variable '${name}' is required but not set`);
     }
     return value;
@@ -103,10 +142,17 @@ export function loadConfigText(
 
   const result = configSchema.safeParse(expanded);
   if (!result.success) {
+    const diagnostics = diagnosticsFromZod(result.error);
+    // Every issue is reported, not just the first: an operator fixing a config
+    // wants the whole list, and these are independent findings by construction.
     throw new ConfigError(
-      `Invalid SoroSLO configuration: ${result.error.issues
-        .map((issue) => `${issue.path.join(".") || "$"}: ${issue.message}`)
-        .join("; ")}`
+      [
+        `Invalid SoroSLO configuration (${diagnostics.length} ${
+          diagnostics.length === 1 ? "error" : "errors"
+        }):`,
+        ...diagnostics.map((diagnostic) => `  ${diagnostic.path}: ${diagnostic.message}`)
+      ].join("\n"),
+      { diagnostics }
     );
   }
 

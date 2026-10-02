@@ -1,5 +1,7 @@
 export { ConfigError, expandEnvironment, hashConfig, loadConfigText } from "./load.js";
 export type { LoadedConfig } from "./load.js";
+export { diagnosticsFromZod, formatPath, unresolvedEnvironmentDiagnostics } from "./diagnostics.js";
+export type { ConfigDiagnostic, DiagnosticKind } from "./diagnostics.js";
 export {
   argumentSchema,
   argumentTypeSchema,
