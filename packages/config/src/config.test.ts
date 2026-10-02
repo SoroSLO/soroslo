@@ -166,6 +166,102 @@ void test("accepts a string expected value for string operators", () => {
   assert.equal(loaded.config.services[0]?.checks[0]?.steps[0]?.assertions[0]?.value, "transfer");
 });
 
+void test("accepts a between assertion with inclusive bounds", () => {
+  const source = configYaml()
+    .replace(
+      `              - path: $
+                op: gt
+                value: "0"`,
+      `              - path: $.value
+                op: between
+                value:
+                  lower: 1
+                  upper: "9007199254740993"`
+    )
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  const loaded = loadConfigText(source, { environment: {} });
+  const assertion = loaded.config.services[0]?.checks[0]?.steps[0]?.assertions[0];
+  assert.equal(assertion?.op, "between");
+});
+
+void test("rejects a between assertion whose lower bound exceeds the upper", () => {
+  const source = configYaml()
+    .replace(
+      `              - path: $
+                op: gt
+                value: "0"`,
+      `              - path: $.value
+                op: between
+                value:
+                  lower: 10
+                  upper: 1`
+    )
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  assert.throws(
+    () => loadConfigText(source, { environment: {} }),
+    /lower bound must not exceed the upper bound/
+  );
+});
+
+void test("rejects a between assertion without an object value", () => {
+  const source = configYaml()
+    .replace(
+      `              - path: $
+                op: gt
+                value: "0"`,
+      `              - path: $.value
+                op: between
+                value: 5`
+    )
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  assert.throws(
+    () => loadConfigText(source, { environment: {} }),
+    /between requires an object with lower and upper bounds/
+  );
+});
+
+void test("rejects a bounds object for an operator other than between", () => {
+  for (const op of ["gt", "equals", "age_lt"] as const) {
+    const source = configYaml()
+      .replace(
+        `              - path: $
+                op: gt
+                value: "0"`,
+        `              - path: $.value
+                op: ${op}
+                value:
+                  lower: 1
+                  upper: 5`
+      )
+      .replace(/^notifications:[\s\S]*$/m, "");
+
+    assert.throws(
+      () => loadConfigText(source, { environment: {} }),
+      new RegExp(`${op} does not accept an object value`)
+    );
+  }
+});
+
+void test("rejects non-numeric between bounds", () => {
+  const source = configYaml()
+    .replace(
+      `              - path: $
+                op: gt
+                value: "0"`,
+      `              - path: $.value
+                op: between
+                value:
+                  lower: nope
+                  upper: 5`
+    )
+    .replace(/^notifications:[\s\S]*$/m, "");
+
+  assert.throws(() => loadConfigText(source, { environment: {} }), /between bounds must be numeric/);
+});
+
 void test("accepts a jitter fraction within the documented cap", () => {
   const source = configYaml()
     .replace("        every: 5m", "        every: 5m\n        jitter: 0.2")
