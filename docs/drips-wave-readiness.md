@@ -23,20 +23,21 @@ The project is intentionally non-custodial: normal runtime checks do not accept 
 - Real Stellar Testnet acceptance evidence.
 - Documented security boundary and threat model.
 - Contributor guide, maintainer policy, support guide, CODEOWNERS, changelog, issue templates, and PR template.
-- 28 scoped contributor issues, all marked `help wanted`.
-- 5 narrower issues marked `good first issue`.
+- 24 scoped contributor issues, all marked `help wanted`.
+- 3 narrower issues marked `good first issue`.
 - Contributor issues include problem statements, scope, acceptance criteria, verification, likely packages, non-goals, dependencies, and security/compatibility notes.
+- One external contributor has four merged pull requests (#45–#48), including maintainer-resolved conflict integration that preserves the contributor history.
 
 ## Contributor backlog planning
 
-The current Wave-ready backlog contains 28 issues.
+The current Wave-ready backlog contains 24 issues.
 
 Suggested working complexity:
 
 - Trivial: 0 issues / 0 points
-- Medium: 22 issues / 3,300 points
+- Medium: 18 issues / 2,700 points
 - High: 6 issues / 1,200 points
-- Total planning value: 4,500 points
+- Total planning value: 3,900 points
 
 These are planning values only. Final complexity must be set in the Drips maintainer UI and must respect the repository/org points budget assigned by the Wave Program.
 
@@ -96,23 +97,23 @@ Do not require signed commits at this stage because that would raise unnecessary
 
 Keep the application evidence-based:
 
-- describe the public v0.1 release, Testnet acceptance, CI/security controls, and contributor-ready backlog exactly as they exist;
-- do not claim production adoption, external contributors, users, stars, or ecosystem endorsements that are not independently evidenced;
+- describe the public v0.1 release, Testnet acceptance, CI/security controls, merged external contribution history, and contributor-ready backlog exactly as they exist;
+- do not claim production adoption, users, stars, or ecosystem endorsements that are not independently evidenced;
 - treat all proposed complexity/point totals as planning estimates until they are set in Drips;
 - do not create filler issues or downscope meaningful work just to increase the number of Wave tasks;
 - re-check repository state immediately before submitting because Program admission remains an organizer decision.
 
-## Maintainer-readiness audit — 2026-09-30
+## Maintainer-readiness audit — 2026-10-02
 
 Verified baseline:
 
 - repository description and Stellar/Soroban/open-source topics are configured;
 - `main` is covered by an active GitHub ruleset requiring pull requests, `quality`, `e2e`, resolved review conversations, and blocking force-push/deletion;
 - `v0.1.0` is a public non-prerelease release;
-- all 28 contributor issues are open, unassigned, and carry `help wanted`;
-- the five deliberately narrower entry tasks also carry `good first issue`; those labels indicate accessibility, not Trivial Drips complexity;
+- all 24 remaining contributor issues are open, unassigned, and carry `help wanted`;
+- the three remaining deliberately narrower entry tasks also carry `good first issue`; those labels indicate accessibility, not Trivial Drips complexity;
 - every contributor issue contains Problem, Scope, Acceptance criteria, Tests/verification, Non-goals, Dependencies, and Security/compatibility sections;
-- a stale superseded pull request was closed;
+- the four external-contributor PRs (#45–#48) are merged; the two conflict-heavy branches were integrated through maintainer resolution while preserving contributor ancestry;
 - current GitHub Actions dependencies were upgraded through green Dependabot pull requests;
 - the complexity plan was re-reviewed against current Drips guidance; no task is being labeled Trivial merely to increase issue count;
 - the one-off v0.1 release automation is being replaced by a reusable tag-verified release workflow;
