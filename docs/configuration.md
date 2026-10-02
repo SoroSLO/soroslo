@@ -132,6 +132,26 @@ Numeric comparisons are exact. There is no JavaScript, regex, shell, or plugin e
 These operators are merged after the v0.1 release, so a configuration that uses
 them is not portable to a v0.1 runtime.
 
+- `between` applies to numeric values and asserts an inclusive interval. Both
+  `lower` and `upper` are inclusive. Bounds may be numbers or decimal strings
+  and use the same exact comparison as the other numeric operators, including
+  values beyond IEEE-754 safe-integer precision. An inverted interval is
+  rejected during config loading.
+
+```yaml
+assertions:
+  - path: $.ledger
+    op: between
+    value:
+      lower: 1000
+      upper: 2000
+  - path: $.ratio
+    op: between
+    value:
+      lower: "0.75"
+      upper: "1.25"
+```
+
 - `contains`, `starts_with` and `ends_with` apply to string values only: a
   non-string expected value is reported as `invalid_expected_value`, a
   non-string observed value as `type_mismatch`, and comparison is

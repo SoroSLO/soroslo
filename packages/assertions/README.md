@@ -22,3 +22,7 @@ uses them is not portable to a baseline runtime.
   Comparison is case-sensitive, with no regex or pattern language and no Unicode
   normalization or coercion. A non-string observed value reports
   `type_mismatch`.
+- `between` — inclusive numeric interval. Both bounds are inclusive, and bounds
+  may be numbers or decimal strings. Exact comparison is used for large integers
+  and decimals; inverted or non-numeric bounds are invalid expected values, while
+  a non-numeric observed value reports `type_mismatch`.
