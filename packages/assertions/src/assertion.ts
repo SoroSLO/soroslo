@@ -1,5 +1,4 @@
-import { canonicalJson, getJsonPath, parseDurationMs } from "@soroslo/shared";
-import { compareExactNumeric } from "./numeric.js";
+import { canonicalJson, compareExactNumeric, getJsonPath, parseDurationMs } from "@soroslo/shared";
 
 export type AssertionOperator =
   | "equals"
@@ -13,7 +12,8 @@ export type AssertionOperator =
   | "age_lt"
   | "contains"
   | "starts_with"
-  | "ends_with";
+  | "ends_with"
+  | "between";
 
 export interface AssertionSpec {
   path: string;
@@ -117,6 +117,45 @@ export function evaluateAssertion(
     }
 
     return result(spec, pathResult.value, passed, passed ? "matched" : "comparison_failed");
+  }
+
+  if (spec.op === "between") {
+    const bounds = spec.value;
+    if (
+      typeof bounds !== "object" ||
+      bounds === null ||
+      Array.isArray(bounds) ||
+      !("lower" in bounds) ||
+      !("upper" in bounds)
+    ) {
+      return result(spec, pathResult.value, false, "invalid_expected_value");
+    }
+
+    const { lower, upper } = bounds;
+
+    try {
+      if (compareExactNumeric(lower, upper) > 0) {
+        return result(spec, pathResult.value, false, "invalid_expected_value");
+      }
+    } catch {
+      return result(spec, pathResult.value, false, "invalid_expected_value");
+    }
+
+    let observedInRange: boolean;
+    try {
+      observedInRange =
+        compareExactNumeric(pathResult.value, lower) >= 0 &&
+        compareExactNumeric(pathResult.value, upper) <= 0;
+    } catch {
+      return result(spec, pathResult.value, false, "type_mismatch");
+    }
+
+    return result(
+      spec,
+      pathResult.value,
+      observedInRange,
+      observedInRange ? "matched" : "comparison_failed"
+    );
   }
 
   if (spec.op === "age_lt") {
