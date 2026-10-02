@@ -259,7 +259,10 @@ void test("rejects non-numeric between bounds", () => {
     )
     .replace(/^notifications:[\s\S]*$/m, "");
 
-  assert.throws(() => loadConfigText(source, { environment: {} }), /between bounds must be numeric/);
+  assert.throws(
+    () => loadConfigText(source, { environment: {} }),
+    /between bounds must be numeric/
+  );
 });
 
 void test("accepts a jitter fraction within the documented cap", () => {
