@@ -27,7 +27,22 @@ export type {
 export { simulateInvocation } from "./simulate.js";
 export type { SimulateInvocationInput } from "./simulate.js";
 
-export { deterministicRpcFixtures } from "./fixtures.js";
+export {
+  buildBoundedLargePayload,
+  buildContractErrorSimulationResponse,
+  buildMalformedRpcResponse,
+  buildNetworkFixture,
+  buildRetryableHttpError,
+  buildSuccessfulSimulationResponse,
+  buildTransportError,
+  deterministicRpcFixtures
+} from "./fixtures.js";
+export type {
+  NetworkFixtureOverrides,
+  SimulationResponseOverrides,
+  TransportErrorOverrides,
+  MalformedResponseOverrides
+} from "./fixtures.js";
 
 export const packageName = "@soroslo/stellar" as const;
 export type PackageName = typeof packageName;
